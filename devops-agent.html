@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevOps AI Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060A0F;
+    --panel: #0B1118;
+    --border: #1A2535;
+    --border-bright: #243347;
+    --green: #00FF88;
+    --green-dim: #00CC6A;
+    --amber: #FFAA00;
+    --red: #FF3D5A;
+    --blue: #4D9FFF;
+    --purple: #A855F7;
+    --text: #C8D8E8;
+    --text-dim: #6B8099;
+    --text-bright: #EAF4FF;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: var(--green);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 8px var(--green); }
+    50% { box-shadow: 0 0 20px var(--green); }
+  }
+
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-bright);
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span { color: var(--green); }
+
+  .header-status {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  .status-dot.amber { background: var(--amber); }
+  .status-dot.red { background: var(--red); animation: blink 0.8s ease-in-out infinite; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .header-time {
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    flex: 1;
+    overflow: hidden;
+    gap: 0;
+  }
+
+  /* PANELS */
+  .panel {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel:last-child { border-right: none; }
+
+  .panel-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.02);
+  }
+
+  .panel-title {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  .panel-body::-webkit-scrollbar { width: 3px; }
+  .panel-body::-webkit-scrollbar-track { background: transparent; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  /* LEFT PANEL - K8s + Prometheus */
+  .metric-group { margin-bottom: 18px; }
+
+  .metric-group-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .metric-group-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .metric-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .metric-card:hover {
+    border-color: var(--border-bright);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .metric-card.alert {
+    border-color: rgba(255,61,90,0.4);
+    background: rgba(255,61,90,0.04);
+  }
+
+  .metric-card.warn {
+    border-color: rgba(255,170,0,0.35);
+    background: rgba(255,170,0,0.04);
+  }
+
+  .metric-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .metric-name {
+    font-size: 11px;
+    color: var(--text-bright);
+    font-weight: 500;
+  }
+
+  .metric-value {
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .metric-value.ok { color: var(--green); }
+  .metric-value.warn { color: var(--amber); }
+  .metric-value.crit { color: var(--red); }
+
+  .metric-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .metric-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  .metric-bar-fill.ok { background: var(--green); }
+  .metric-bar-fill.warn { background: var(--amber); }
+  .metric-bar-fill.crit { background: var(--red); }
+
+  .metric-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .pod-list { margin-top: 4px; }
+
+  .pod-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .pod-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .btn-analyze {
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(0,255,136,0.08);
+    border: 1px solid rgba(0,255,136,0.3);
+    border-radius: 5px;
+    color: var(--green);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-analyze:hover {
+    background: rgba(0,255,136,0.15);
+    border-color: var(--green);
+  }
+
+  /* MIDDLE PANEL - Agent Chat */
+  .chat-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .chat-area::-webkit-scrollbar { width: 3px; }
+  .chat-area::-webkit-scrollbar-track { background: transparent; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+  .msg {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: msg-in 0.3s ease;
+  }
+
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .msg-label.user { color: var(--blue); }
+  .msg-label.agent { color: var(--green); }
+  .msg-label.tool { color: var(--purple); }
+  .msg-label.system { color: var(--text-dim); }
+
+  .msg-body {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    line-height: 1.65;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+
+  .msg-body.user {
+    border-color: rgba(77,159,255,0.25);
+    background: rgba(77,159,255,0.05);
+    color: var(--text-bright);
+  }
+
+  .msg-body.tool {
+    border-color: rgba(168,85,247,0.25);
+    background: rgba(168,85,247,0.04);
+    font-size: 11.5px;
+  }
+
+  .msg-body.system {
+    border-color: rgba(255,170,0,0.2);
+    background: rgba(255,170,0,0.03);
+    font-size: 11px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .tool-call {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(168,85,247,0.08);
+    border: 1px solid rgba(168,85,247,0.2);
+    border-radius: 5px;
+    margin-bottom: 6px;
+    font-size: 11px;
+  }
+
+  .tool-icon { font-size: 14px; }
+
+  .tool-name { color: var(--purple); font-weight: 500; }
+
+  .tool-args { color: var(--text-dim); font-size: 10px; margin-left: auto; }
+
+  .tool-result {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    white-space: pre-wrap;
+    background: rgba(0,0,0,0.3);
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 6px;
+    color: var(--text-dim);
+    border-left: 2px solid var(--purple);
+    max-height: 120px;
+    overflow-y: auto;
+  }
+
+  .thinking {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 8px 0;
+    font-style: italic;
+  }
+
+  .thinking-dots span {
+    animation: dot-blink 1.2s ease-in-out infinite;
+    opacity: 0;
+  }
+
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes dot-blink {
+    0%, 80%, 100% { opacity: 0; }
+    40% { opacity: 1; }
+  }
+
+  /* CHAT INPUT */
+  .chat-input-area {
+    border-top: 1px solid var(--border);
+    padding: 12px 14px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.01);
+  }
+
+  .quick-cmds {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .quick-cmd {
+    padding: 4px 10px;
+    border: 1px solid var(--border-bright);
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.15s;
+  }
+
+  .quick-cmd:hover {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(0,255,136,0.05);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .chat-input {
+    flex: 1;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text-bright);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    resize: none;
+    outline: none;
+    line-height: 1.5;
+    transition: border-color 0.2s;
+    min-height: 42px;
+    max-height: 120px;
+  }
+
+  .chat-input:focus { border-color: rgba(0,255,136,0.4); }
+  .chat-input::placeholder { color: var(--text-dim); }
+
+  .send-btn {
+    padding: 10px 16px;
+    background: var(--green);
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    height: 42px;
+  }
+
+  .send-btn:hover { background: var(--green-dim); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* RIGHT PANEL - Logs */
+  .log-stream {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    line-height: 1.7;
+  }
+
+  .log-line {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.02);
+    animation: log-in 0.3s ease;
+  }
+
+  @keyframes log-in {
+    from { opacity: 0; background: rgba(0,255,136,0.05); }
+    to { opacity: 1; background: transparent; }
+  }
+
+  .log-ts { color: var(--text-dim); margin-right: 6px; }
+  .log-level { font-weight: 700; margin-right: 6px; padding: 1px 5px; border-radius: 2px; font-size: 9px; }
+  .log-level.INFO { background: rgba(77,159,255,0.15); color: var(--blue); }
+  .log-level.WARN { background: rgba(255,170,0,0.15); color: var(--amber); }
+  .log-level.ERROR { background: rgba(255,61,90,0.15); color: var(--red); }
+  .log-level.DEBUG { background: rgba(255,255,255,0.05); color: var(--text-dim); }
+  .log-msg { color: var(--text); }
+  .log-msg.error { color: #FF7088; }
+  .log-msg.warn { color: #FFCC66; }
+
+  /* Pipeline status */
+  .pipeline-section { margin-bottom: 16px; }
+
+  .pipeline-title {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .pipeline-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    margin-bottom: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .pipeline-item:hover {
+    border-color: var(--border-bright);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .pipeline-status {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .pipeline-name { flex: 1; color: var(--text); }
+  .pipeline-time { color: var(--text-dim); font-size: 10px; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 12px 0;
+  }
+
+  /* Agent thinking indicator */
+  .agent-thinking-bar {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    display: none;
+  }
+
+  .agent-thinking-bar.active { display: block; }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  code { color: var(--amber); font-family: var(--font-mono); }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .tag.k8s { background: rgba(77,159,255,0.15); color: var(--blue); }
+  .tag.prom { background: rgba(255,170,0,0.12); color: var(--amber); }
+  .tag.fix { background: rgba(0,255,136,0.1); color: var(--green); }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 24px;
+  }
+
+  .empty-icon { font-size: 32px; opacity: 0.4; }
+  .empty-title { font-family: var(--font-display); font-size: 14px; color: var(--text-dim); }
+  .empty-sub { font-size: 11px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <span class="logo-text">DevOps<span>AI</span> Agent</span>
+  </div>
+  <div class="header-status">
+    <div class="status-badge"><div class="status-dot"></div> Agent Online</div>
+    <div class="status-badge"><div class="status-dot amber"></div> 2 Warnings</div>
+    <div class="status-badge"><div class="status-dot red"></div> 1 Critical</div>
+    <div class="header-time" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<div class="agent-thinking-bar" id="thinkingBar"></div>
+
+<div class="main">
+
+  <!-- LEFT: Infra Metrics -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Infrastructure</span>
+      <span style="font-size:10px;color:var(--text-dim)">k8s + prometheus</span>
+    </div>
+    <div class="panel-body">
+
+      <div class="metric-group">
+        <div class="metric-group-label">Cluster Health</div>
+
+        <div class="metric-card alert" onclick="analyzeMetric('CPU spike detected on api-gateway pod (94%). Potential memory leak or DDoS.')">
+          <div class="metric-top">
+            <span class="metric-name">api-gateway CPU</span>
+            <span class="metric-value crit">94%</span>
+          </div>
+          <div class="metric-bar"><div class="metric-bar-fill crit" style="width:94%"></div></div>
+          <div class="metric-sub">Threshold: 80% · pod: api-gw-7f9b</div>
+        </div>
+
+        <div class="metric-card warn" onclick="analyzeMetric('Memory usage on auth-service is at 71% and climbing. OOMKilled twice in last hour.')">
+          <div class="metric-top">
+            <span class="metric-name">auth-service MEM</span>
+            <span class="metric-value warn">71%</span>
+          </div>
+          <div class="metric-bar"><div class="metric-bar-fill warn" style="width:71%"></div></div>
+          <div class="metric-sub">Threshold: 75% · pod: auth-svc-2xk9</div>
+        </div>
+
+        <div class="metric-card" onclick="analyzeMetric('Database connection pool is healthy at 34% utilization.')">
+          <div class="metric-top">
+            <span class="metric-name">db-postgres CPU</span>
+            <span class="metric-value ok">34%</span>
+          </div>
+          <div class="metric-bar"><div class="metric-bar-fill ok" style="width:34%"></div></div>
+          <div class="metric-sub">Healthy · pod: pg-primary-0</div>
+        </div>
+      </div>
+
+      <div class="metric-group">
+        <div class="metric-group-label">Pod Status</div>
+        <div class="metric-card">
+          <div class="pod-list">
+            <div class="pod-item"><div class="pod-dot" style="background:var(--green)"></div>api-gateway · Running</div>
+            <div class="pod-item"><div class="pod-dot" style="background:var(--amber)"></div>auth-service · Restarting</div>
+            <div class="pod-item"><div class="pod-dot" style="background:var(--green)"></div>user-service · Running</div>
+            <div class="pod-item"><div class="pod-dot" style="background:var(--red)"></div>payment-svc · CrashLoopBackOff</div>
+            <div class="pod-item"><div class="pod-dot" style="background:var(--green)"></div>notification · Running</div>
+            <div class="pod-item"><div class="pod-dot" style="background:var(--green)"></div>pg-primary-0 · Running</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-group">
+        <div class="metric-group-label">Pipelines</div>
+
+        <div class="pipeline-item" onclick="analyzeMetric('CI/CD pipeline for payment-service failed at test stage. 3 unit tests failing.')">
+          <div class="pipeline-status" style="background:var(--red)"></div>
+          <span class="pipeline-name">payment-service</span>
+          <span class="pipeline-time">failed 8m ago</span>
+        </div>
+        <div class="pipeline-item" onclick="analyzeMetric('API gateway deployment pipeline succeeded and was deployed to production.')">
+          <div class="pipeline-status" style="background:var(--green)"></div>
+          <span class="pipeline-name">api-gateway</span>
+          <span class="pipeline-time">passed 22m ago</span>
+        </div>
+        <div class="pipeline-item" onclick="analyzeMetric('Auth service pipeline is currently running integration tests.')">
+          <div class="pipeline-status" style="background:var(--amber); animation:blink 1s infinite"></div>
+          <span class="pipeline-name">auth-service</span>
+          <span class="pipeline-time">running...</span>
+        </div>
+
+        <button class="btn-analyze" onclick="analyzeMetric('Run full system health check. Analyze all pods, metrics, and pipelines. Identify critical issues and provide actionable fixes.')">
+          ⚡ Full System Analysis
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MIDDLE: Agent Chat -->
+  <div class="panel" style="border-right:none">
+    <div class="panel-header">
+      <span class="panel-title">AI Agent</span>
+      <span style="font-size:10px;color:var(--green)">● LLM Orchestrator Active</span>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🤖</div>
+        <div class="empty-title">DevOps AI Agent Ready</div>
+        <div class="empty-sub">Click any metric card to auto-analyze, select a quick command below, or type a question about your infrastructure.</div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="quick-cmds">
+        <button class="quick-cmd" onclick="sendQuick('Why is payment-service in CrashLoopBackOff?')">🔴 payment-svc crash</button>
+        <button class="quick-cmd" onclick="sendQuick('Analyze the api-gateway CPU spike and suggest fixes')">⚡ CPU spike fix</button>
+        <button class="quick-cmd" onclick="sendQuick('Trigger a rollback for the last payment-service deployment')">↩ Rollback deploy</button>
+        <button class="quick-cmd" onclick="sendQuick('Show me the top 5 errors from the last hour of logs')">📋 Error summary</button>
+        <button class="quick-cmd" onclick="sendQuick('Scale up the auth-service replicas to handle increased load')">📈 Scale replicas</button>
+      </div>
+      <div class="input-row">
+        <textarea class="chat-input" id="chatInput" placeholder="Ask about your infrastructure, request analysis, or trigger actions..." rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Live Logs -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Live Logs</span>
+      <span style="font-size:10px;color:var(--text-dim)" id="logCount">0 lines</span>
+    </div>
+    <div class="panel-body" id="logPanel">
+      <div class="log-stream" id="logStream"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────
+let messageHistory = [];
+let isProcessing = false;
+let logLineCount = 0;
+
+// ─── Clock ───────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', {hour12: false});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── Live Log Simulation ────────────────────────────────
+const logTemplates = [
+  { level: 'INFO',  svc: 'api-gateway',    msgs: ['GET /api/v1/users 200 12ms', 'POST /api/v1/auth 200 45ms', 'GET /health 200 2ms', 'Connection pool: 34/100 active'] },
+  { level: 'WARN',  svc: 'auth-service',   msgs: ['Memory pressure detected: 71% used', 'JWT validation latency: 234ms (threshold: 150ms)', 'Redis connection retry #3'] },
+  { level: 'ERROR', svc: 'payment-svc',    msgs: ['FATAL: Cannot connect to payment-db:5432', 'panic: runtime error: invalid memory address', 'CrashLoopBackOff: restarting container'] },
+  { level: 'INFO',  svc: 'user-service',   msgs: ['User created: id=8821', 'Cache HIT ratio: 94.2%', 'Kafka consumer lag: 0'] },
+  { level: 'DEBUG', svc: 'pg-primary',     msgs: ['checkpoint complete: wrote 142 buffers', 'autovacuum: table users', 'WAL sender started'] },
+  { level: 'WARN',  svc: 'api-gateway',    msgs: ['CPU throttled: 94% utilization', 'Request queue depth: 847', 'p99 latency: 2340ms (SLA: 500ms)'] },
+];
+
+function addLog(level, svc, msg) {
+  const stream = document.getElementById('logStream');
+  const ts = new Date().toISOString().split('T')[1].split('.')[0];
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  const msgClass = level === 'ERROR' ? 'error' : level === 'WARN' ? 'warn' : '';
+  div.innerHTML = `<span class="log-ts">${ts}</span><span class="log-level ${level}">${level}</span><span style="color:var(--blue);margin-right:6px;font-size:10px">${svc}</span><span class="log-msg ${msgClass}">${msg}</span>`;
+  stream.insertBefore(div, stream.firstChild);
+  logLineCount++;
+  document.getElementById('logCount').textContent = `${logLineCount} lines`;
+  // Keep max 80 lines
+  while (stream.children.length > 80) stream.removeChild(stream.lastChild);
+}
+
+function runLogSimulation() {
+  const template = logTemplates[Math.floor(Math.random() * logTemplates.length)];
+  const msg = template.msgs[Math.floor(Math.random() * template.msgs.length)];
+  addLog(template.level, template.svc, msg);
+  const delay = 600 + Math.random() * 1400;
+  setTimeout(runLogSimulation, delay);
+}
+
+// Start simulation after a short delay
+setTimeout(runLogSimulation, 800);
+
+// ─── Chat ────────────────────────────────────────────────
+function removeEmptyState() {
+  const es = document.getElementById('emptyState');
+  if (es) es.remove();
+}
+
+function appendMsg(role, content, type = null) {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg';
+
+  let labelClass, labelText, bodyClass;
+
+  if (role === 'user') {
+    labelClass = 'user'; labelText = '▸ YOU'; bodyClass = 'user';
+  } else if (role === 'tool') {
+    labelClass = 'tool'; labelText = '⚙ TOOL EXECUTION'; bodyClass = 'tool';
+  } else if (role === 'system') {
+    labelClass = 'system'; labelText = '◈ SYSTEM'; bodyClass = 'system';
+  } else {
+    labelClass = 'agent'; labelText = '◆ AI AGENT'; bodyClass = '';
+  }
+
+  div.innerHTML = `
+    <div class="msg-label ${labelClass}">${labelText}</div>
+    <div class="msg-body ${bodyClass}">${content}</div>
+  `;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div.querySelector('.msg-body');
+}
+
+function appendThinking() {
+  const area = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.id = 'thinkingMsg';
+  div.className = 'msg';
+  div.innerHTML = `<div class="msg-label agent">◆ AI AGENT</div>
+    <div class="thinking">
+      <span>Reasoning through the infrastructure context</span>
+      <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>
+    </div>`;
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+  return div;
+}
+
+function removeThinking() {
+  const t = document.getElementById('thinkingMsg');
+  if (t) t.remove();
+}
+
+function setProcessing(val) {
+  isProcessing = val;
+  document.getElementById('sendBtn').disabled = val;
+  document.getElementById('thinkingBar').classList.toggle('active', val);
+}
+
+// ─── Tool Simulation ─────────────────────────────────────
+const TOOLS = {
+  analyze_logs: {
+    icon: '📋', label: 'analyze_logs',
+    run: (args) => {
+      const results = [];
+      if (args.service?.includes('payment')) {
+        results.push(`[ERROR] payment-svc: panic: runtime error: invalid memory address (3 occurrences)`);
+        results.push(`[ERROR] payment-svc: Cannot connect to payment-db:5432 — connection refused`);
+        results.push(`[ERROR] payment-svc: CrashLoopBackOff — restart count: 12`);
+        results.push(`[INFO]  Last successful run: 2025-03-20T09:14:22Z`);
+        results.push(`[WARN]  DB_HOST env var: payment-db (resolves to 10.96.0.15)`);
+        results.push(`[ERROR] payment-db pod: Terminating (OOMKilled — 512Mi limit exceeded)`);
+      } else if (args.service?.includes('api-gateway') || args.service?.includes('cpu')) {
+        results.push(`[WARN]  api-gw-7f9b: CPU throttling events: 847 in last 15min`);
+        results.push(`[WARN]  Request queue depth: 847 pending`);
+        results.push(`[INFO]  Active connections: 2,341 (limit: 1,000)`);
+        results.push(`[WARN]  p99 latency degraded: 2,340ms (SLA: 500ms)`);
+        results.push(`[INFO]  No OOM events. CPU-bound workload confirmed.`);
+      } else {
+        results.push(`[INFO]  Scanned 10,482 log lines across all services`);
+        results.push(`[ERROR] 3 distinct error patterns found`);
+        results.push(`[WARN]  5 warnings across auth-service and api-gateway`);
+        results.push(`[INFO]  Top error: payment-svc DB connection failure (67% of errors)`);
+      }
+      return results.join('\n');
+    }
+  },
+  get_k8s_status: {
+    icon: '☸', label: 'get_k8s_status',
+    run: (args) => {
+      return `NAME                    READY  STATUS             RESTARTS  AGE
+api-gw-7f9b4c-xkp9      1/1    Running            0         2h
+auth-svc-2xk9p-lm7t     0/1    CrashLoopBackOff   4         45m
+payment-svc-9d3f-r8qw    0/1    CrashLoopBackOff   12        1h
+user-svc-5b2a-kj8x       1/1    Running            0         2h
+pg-primary-0             1/1    Running            0         5d
+payment-db-0             0/1    OOMKilled           3         1h`;
+    }
+  },
+  get_prometheus_metrics: {
+    icon: '📊', label: 'get_prometheus_metrics',
+    run: (args) => {
+      return `container_cpu_usage{pod="api-gw-7f9b"}    0.94
+container_memory_usage{pod="auth-svc-2xk9"}  0.71
+container_cpu_usage{pod="payment-svc-9d3f"}  0.00  (not running)
+container_memory_usage{pod="pg-primary-0"}   0.34
+http_request_duration_p99{svc="api-gateway"} 2340ms
+http_requests_total{svc="api-gateway"}       12847 req/min
+kube_pod_container_status_restarts{pod="payment-svc"} 12`;
+    }
+  },
+  trigger_pipeline: {
+    icon: '🚀', label: 'trigger_pipeline',
+    run: (args) => {
+      const id = Math.random().toString(36).substr(2, 8).toUpperCase();
+      addLog('INFO', 'ci-cd', `Pipeline triggered: ${args.pipeline || 'service'} · run_id=${id}`);
+      return `Pipeline triggered successfully
+Run ID: ${id}
+Pipeline: ${args.pipeline || 'payment-service'}
+Branch: ${args.branch || 'main'}
+Trigger: AI Agent (automated)
+Status: Queued → Running
+ETA: ~4 minutes
+Webhook: https://ci.internal/runs/${id}`;
+    }
+  },
+  scale_deployment: {
+    icon: '📈', label: 'scale_deployment',
+    run: (args) => {
+      addLog('INFO', 'kubectl', `Scaling ${args.deployment} to ${args.replicas} replicas`);
+      return `Deployment scaled successfully
+Target: ${args.deployment || 'api-gateway'}
+Previous replicas: ${Math.max(1, (args.replicas || 3) - 2)}
+New replicas: ${args.replicas || 3}
+Status: Progressing
+Rolling update: 0/${args.replicas || 3} updated
+Apply time: ~30 seconds`;
+    }
+  },
+  apply_fix: {
+    icon: '🔧', label: 'apply_fix',
+    run: (args) => {
+      addLog('INFO', 'agent', `Applying fix: ${args.fix_type} on ${args.target}`);
+      return `Fix applied: ${args.fix_type || 'resource_limit_update'}
+Target: ${args.target || 'payment-db'}
+Changes:
+  resources.limits.memory: 512Mi → 1Gi
+  resources.requests.memory: 256Mi → 512Mi
+Manifest patched and applied
+Pod restart scheduled
+Rollout status: Waiting for pod...`;
+    }
+  }
+};
+
+function renderToolCall(toolName, args) {
+  const t = TOOLS[toolName] || { icon: '⚙', label: toolName };
+  const argsStr = Object.entries(args).map(([k,v]) => `${k}=${v}`).join(', ');
+  return `<div class="tool-call">
+    <span class="tool-icon">${t.icon}</span>
+    <span class="tool-name">${t.label}()</span>
+    <span class="tool-args">${argsStr}</span>
+  </div>`;
+}
+
+// ─── Main Agent Call ─────────────────────────────────────
+async function callAgent(userMsg) {
+  setProcessing(true);
+  removeEmptyState();
+
+  appendMsg('user', userMsg);
+  messageHistory.push({ role: 'user', content: userMsg });
+
+  appendThinking();
+
+  const systemPrompt = `You are an expert AI DevOps agent with access to Kubernetes, Prometheus, CI/CD pipelines, and log analysis tools.
+
+Current infrastructure state:
+- api-gateway: CPU 94% (CRITICAL), pod api-gw-7f9b, p99 latency 2340ms
+- auth-service: Memory 71% (WARNING), CrashLoopBackOff, restarted 4 times  
+- payment-svc: CrashLoopBackOff (12 restarts), DB connection failure, payment-db OOMKilled
+- pg-primary: Healthy (CPU 34%)
+- payment-db: OOMKilled (memory limit 512Mi exceeded)
+
+Available tools: analyze_logs, get_k8s_status, get_prometheus_metrics, trigger_pipeline, scale_deployment, apply_fix
+
+CRITICAL INSTRUCTIONS:
+1. You MUST use tools before answering any infrastructure question
+2. Format tool calls EXACTLY as: TOOL_CALL:toolname:{"param":"value"}
+3. After each tool call, I will provide the result, then you continue reasoning
+4. For fixes, be specific: show exact kubectl commands, YAML patches, or config changes
+5. Structure your final response with: Root Cause, Impact, Immediate Actions (with tool calls), and Prevention
+6. Be direct and concise — this is a production incident response
+
+Always think step by step. Use multiple tools to gather full context before recommending fixes.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: messageHistory
+      })
+    });
+
+    const data = await response.json();
+    removeThinking();
+
+    if (!response.ok || !data.content) {
+      throw new Error(data.error?.message || 'API error');
+    }
+
+    let rawText = data.content.map(b => b.text || '').join('');
+    messageHistory.push({ role: 'assistant', content: rawText });
+
+    // Parse tool calls from response
+    const toolCallRegex = /TOOL_CALL:(\w+):\{([^}]+)\}/g;
+    let match;
+    const toolCalls = [];
+    while ((match = toolCallRegex.exec(rawText)) !== null) {
+      const toolName = match[1];
+      try {
+        const args = JSON.parse('{' + match[2] + '}');
+        toolCalls.push({ name: toolName, args, full: match[0] });
+      } catch(e) {
+        toolCalls.push({ name: toolName, args: {}, full: match[0] });
+      }
+    }
+
+    // Execute tool calls and build response
+    let toolResultsForHistory = '';
+    let toolHtml = '';
+    for (const tc of toolCalls) {
+      const tool = TOOLS[tc.name];
+      const result = tool ? tool.run(tc.args) : `Tool "${tc.name}" not found`;
+      toolHtml += renderToolCall(tc.name, tc.args);
+      toolHtml += `<div class="tool-result">${result}</div>`;
+      toolResultsForHistory += `\n[Tool: ${tc.name}]\n${result}\n`;
+    }
+
+    if (toolHtml) {
+      appendMsg('tool', toolHtml, 'tool');
+    }
+
+    // Clean the text response: remove TOOL_CALL lines, format nicely
+    let cleanText = rawText
+      .replace(/TOOL_CALL:\w+:\{[^}]+\}/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    // Format markdown-like syntax
+    cleanText = cleanText
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>')
+      .replace(/#{1,3} (.+)/g, '<strong style="color:var(--text-bright);font-size:13px">$1</strong>')
+      .replace(/^- (.+)/gm, '• $1');
+
+    if (cleanText) {
+      appendMsg('assistant', cleanText);
+    }
+
+    // If there were tool calls, add results to history and get follow-up if needed
+    if (toolCalls.length > 0 && cleanText.length < 100) {
+      messageHistory.push({ role: 'user', content: `Tool results:\n${toolResultsForHistory}\n\nNow provide your analysis, root cause, and specific fix recommendations.` });
+
+      const followUp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages: messageHistory
+        })
+      });
+      const followData = await followUp.json();
+      if (followData.content) {
+        let followText = followData.content.map(b => b.text || '').join('')
+          .replace(/TOOL_CALL:\w+:\{[^}]+\}/g, '')
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\n/g, '<br>')
+          .trim();
+        if (followText) appendMsg('assistant', followText);
+        messageHistory.push({ role: 'assistant', content: followData.content.map(b => b.text || '').join('') });
+      }
+    }
+
+  } catch (err) {
+    removeThinking();
+    appendMsg('system', `⚠ Agent error: ${err.message}. Check your API key configuration.`);
+    console.error(err);
+  }
+
+  setProcessing(false);
+}
+
+function sendMessage() {
+  if (isProcessing) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+  callAgent(text);
+}
+
+function sendQuick(text) {
+  if (isProcessing) return;
+  callAgent(text);
+}
+
+function analyzeMetric(context) {
+  if (isProcessing) return;
+  callAgent(context);
+}
+
+// Initial welcome log
+setTimeout(() => {
+  addLog('INFO', 'agent', 'AI DevOps Agent initialized — monitoring active');
+  addLog('INFO', 'k8s', 'Cluster connected: prod-cluster-us-east-1');
+  addLog('INFO', 'prometheus', 'Metrics scrape interval: 15s');
+  addLog('WARN', 'payment-svc', 'CrashLoopBackOff detected — restart count: 12');
+  addLog('ERROR', 'payment-db', 'OOMKilled — memory limit 512Mi exceeded');
+}, 200);
+</script>
+</body>
+</html>
